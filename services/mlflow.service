@@ -1,0 +1,13 @@
+[Unit]
+Description=Mlflow API server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+Restart=on-failure
+ExecStart=/bin/bash -lc "mlflow server --port 5000"
+RestartSec=3
+
+[Install]
+WantedBy=default.target

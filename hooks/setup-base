@@ -1,0 +1,8 @@
+#!/usr/bin/bash
+
+# Expose only the mlflow entrypoint on PATH, not the whole venv bin/,
+# which would shadow the system python3/pip for every login shell.
+# /usr/local/bin is on PATH for both login and non-login shells, so the
+# systemd user service's `bash -lc "mlflow server ..."` finds it.
+install -d /usr/local/bin
+ln -sf "$SDK/bin/mlflow" /usr/local/bin/mlflow

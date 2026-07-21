@@ -1,0 +1,10 @@
+#!/usr/bin/bash
+
+if curl -fsS -o /dev/null --max-time 3 http://127.0.0.1:5000/health 2>/dev/null; then
+    workshopctl set-health okay
+else
+    workshopctl set-health waiting "Mlflow tracking server not responding on :5000 yet"
+    # mlflow has a cold start (SQLite DB init + uvicorn worker fork takes ~20-30s)
+    # sleep to give time to workshop to retry before erroring
+    sleep 3
+fi

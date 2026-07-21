@@ -1,0 +1,54 @@
+name: mlflow
+version: '3.14.0'
+summary: MLflow is an open-source platform for managing the ML lifecycle
+description: |
+  This SDK runs the MLflow tracking server.
+license: Apache-2.0
+
+platforms:
+  ubuntu@24.04:amd64:
+  ubuntu@26.04:amd64:
+
+slots:
+  mlflow-endpoint:
+    interface: tunnel
+    endpoint: localhost:5000
+
+parts:
+  mlflow:
+    plugin: uv
+    source: https://github.com/mlflow/mlflow/archive/refs/tags/v3.14.0.tar.gz
+    source-type: tar
+    build-snaps: [astral-uv]
+    build-environment:
+      # Allow uv to download a standalone CPython 3.12 into the SDK's
+      # python-runtime/ dir, and prefer it over the build-snap's Python.
+      # The uv plugin defaults to UV_PYTHON_DOWNLOADS="never" and
+      # UV_PYTHON_PREFERENCE="only-system", which would make
+      # `uv python find 3.12` resolve to /snap/sdkcraft/.../python3.12
+      # instead of the one we install into python-runtime/.
+      - UV_PYTHON_DOWNLOADS: "manual"
+      - UV_PYTHON_PREFERENCE: "managed"
+    # Bundle uv-managed Python 3.12 inside the SDK — fully self-contained,
+    # no system Python required at runtime on any base. This lets one
+    # sdkcraft.yaml target both ubuntu@24.04 and ubuntu@26.04 (whose system
+    # Python is 3.14, incompatible with mlflow 3.14.0: it imports
+    # importlib.abc.Traversable, removed in 3.14). Do NOT call craftctl
+    # default: the uv plugin's built-in venv step rewrites bin/python* to
+    # the snap-internal path which is dead inside a workshop. Mirrors the
+    # hermes-agent-sdk approach.
+    override-build: |
+      export UV_PYTHON_INSTALL_DIR="$CRAFT_PART_INSTALL/python-runtime"
+      uv python install 3.12
+      PYTHON=$(uv python find 3.12)
+      uv venv --allow-existing --relocatable --python "$PYTHON" "$CRAFT_PART_INSTALL"
+      PYTHON_REL=$(realpath --relative-to="$CRAFT_PART_INSTALL/bin" "$PYTHON")
+      ln -snf "$PYTHON_REL" "$CRAFT_PART_INSTALL/bin/python"
+      ln -snf python "$CRAFT_PART_INSTALL/bin/python3"
+      ln -snf python "$CRAFT_PART_INSTALL/bin/python3.12"
+      VIRTUAL_ENV="$CRAFT_PART_INSTALL" \
+        uv sync --no-dev --no-editable --reinstall
+  services:
+    plugin: dump
+    source: services
+    source-type: local
