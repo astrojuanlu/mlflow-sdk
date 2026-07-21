@@ -15,10 +15,27 @@ slots:
     endpoint: localhost:5000
 
 parts:
-  mlflow:
-    plugin: uv
+  mlflow-source:
+    plugin: dump
     source: https://github.com/mlflow/mlflow/archive/refs/tags/v3.14.0.tar.gz
     source-type: tar
+
+  mlflow-frontend:
+    # Yarn is required, the node plugin is not enough
+    plugin: nil
+    after: [mlflow-source]
+    build-snaps: [node/24/stable]
+    override-build: |
+      cd "$CRAFT_STAGE/mlflow/server/js"
+      npx --yes yarn install
+      npx --yes yarn build
+      mkdir -p "$CRAFT_PART_INSTALL/mlflow/server/js"
+      cp -a build "$CRAFT_PART_INSTALL/mlflow/server/js/"
+
+  mlflow:
+    plugin: uv
+    source: .
+    after: [mlflow-source, mlflow-frontend]
     build-snaps: [astral-uv]
     build-environment:
       # Allow uv to download a standalone CPython 3.12 into the SDK's
@@ -38,6 +55,7 @@ parts:
     # the snap-internal path which is dead inside a workshop. Mirrors the
     # hermes-agent-sdk approach.
     override-build: |
+      cp -a "$CRAFT_STAGE/." "$CRAFT_PART_BUILD/"
       export UV_PYTHON_INSTALL_DIR="$CRAFT_PART_INSTALL/python-runtime"
       uv python install 3.12
       PYTHON=$(uv python find 3.12)
@@ -48,6 +66,7 @@ parts:
       ln -snf python "$CRAFT_PART_INSTALL/bin/python3.12"
       VIRTUAL_ENV="$CRAFT_PART_INSTALL" \
         uv sync --no-dev --no-editable --reinstall
+
   services:
     plugin: dump
     source: services
