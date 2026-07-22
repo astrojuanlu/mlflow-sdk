@@ -3,4 +3,19 @@
   extends: [
     "config:recommended",
   ],
+  enabledManagers: [
+    "custom.regex",
+  ],
+  customManagers: [
+    {
+      customType: "regex",
+      managerFilePatterns: ["sdkcraft.yaml$"],
+      matchStrings: [
+        "version:\\s*'(?<currentValue>[0-9.]+)'",
+      ],
+      depNameTemplate: "mlflow/mlflow",
+      datasourceTemplate: "github-releases",
+      versioningTemplate: "semver",
+    },
+  ],
 }
