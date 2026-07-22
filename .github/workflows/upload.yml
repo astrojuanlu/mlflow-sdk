@@ -19,6 +19,7 @@ jobs:
   build-and-upload:
     uses: canonical/sdkcraft-actions/.github/workflows/upload.yml@main
     with:
+      runs-on: '["ubuntu-latest"]'
       platforms: '["ubuntu@24.04:amd64","ubuntu@26.04:amd64"]'
       platform-flag: "--platform"
       track: main
