@@ -58,7 +58,14 @@ parts:
       cp -a "$CRAFT_STAGE/." "$CRAFT_PART_BUILD/"
       export UV_PYTHON_INSTALL_DIR="$CRAFT_PART_INSTALL/python-runtime"
       uv python install 3.12
-      PYTHON=$(uv python find 3.12)
+      # `uv python find` can return a path outside $CRAFT_PART_INSTALL
+      # (e.g. inside $CRAFT_PART_BUILD),
+      # producing symlinks with a spurious build/ segment
+      PYTHON=$(find "$CRAFT_PART_INSTALL/python-runtime" -name "python3.12" -type f | head -1)
+      if [ -z "$PYTHON" ]; then
+          echo "error: python 3.12 not found in $CRAFT_PART_INSTALL/python-runtime"
+          exit 1
+      fi
       uv venv --allow-existing --relocatable --python "$PYTHON" "$CRAFT_PART_INSTALL"
       PYTHON_REL=$(realpath --relative-to="$CRAFT_PART_INSTALL/bin" "$PYTHON")
       ln -snf "$PYTHON_REL" "$CRAFT_PART_INSTALL/bin/python"
