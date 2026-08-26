@@ -14,6 +14,12 @@ slots:
     interface: tunnel
     endpoint: localhost:5000
 
+plugs:
+  mlflow-store:
+    interface: mount
+    workshop-target: /home/workshop/mlflow
+    mode: 448
+
 parts:
   mlflow-source:
     plugin: dump
