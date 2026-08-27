@@ -22,7 +22,7 @@ jobs:
       runs-on: '["ubuntu-latest"]'
       platforms: '["ubuntu@24.04:amd64","ubuntu@26.04:amd64"]'
       platform-flag: "--platform"
-      track: main
-      risk: stable
+      track: latest
+      risk: edge
     secrets:
       SDKCRAFT_STORE_CREDENTIALS: ${{ secrets.SDKCRAFT_STORE_CREDENTIALS_PROD }}
