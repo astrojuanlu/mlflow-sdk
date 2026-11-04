@@ -1,0 +1,4 @@
+name: test-mlflow
+base: ${BASE}
+sdks:
+  - name: mlflow

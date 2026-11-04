@@ -1,0 +1,26 @@
+name: 'Test an SDK'
+description: >-
+  Run the SDK's spread suite with `sdkcraft test`. Requires LXD and sdkcraft
+  to be installed first (e.g. by ./.github/actions/sdkcraft/pack).
+author: 'mlflow-sdk maintainers'
+
+inputs:
+  test-disk-size:
+    description: 'Size of the VM root disk for running tests'
+    required: false
+    default: '20GiB'
+
+runs:
+  using: composite
+  steps:
+    - name: Run tests
+      shell: bash
+      env:
+        INPUT_TEST_DISK_SIZE: ${{ inputs.test-disk-size }}
+      run: |
+        if [ -f tests/spread.yaml ]; then
+          lxc profile device set default root size="$INPUT_TEST_DISK_SIZE"
+          sdkcraft --verbose test
+        else
+          echo "No tests/spread.yaml found – skipping."
+        fi
