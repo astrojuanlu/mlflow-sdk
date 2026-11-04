@@ -1,0 +1,89 @@
+name: Promote SDK
+
+on:
+  workflow_dispatch:
+    inputs:
+      revision:
+        description: >-
+          Revision to promote: a store revision number, a comma-separated
+          list of them, or "latest" for the newest revision in latest/edge
+        required: false
+        default: latest
+        type: string
+      channel:
+        description: "Target risk level"
+        required: true
+        type: choice
+        options:
+          - beta
+          - candidate
+          - stable
+
+permissions:
+  contents: read
+
+jobs:
+  promote:
+    name: Promote revisions to a risk level
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Install sdkcraft
+        run: sudo snap install sdkcraft --classic
+
+      - name: Promote
+        env:
+          SDKCRAFT_STORE_CREDENTIALS: ${{ secrets.SDKCRAFT_STORE_CREDENTIALS_PROD }}
+          sdk_name: mlflow
+          requested_channel: ${{ inputs.channel }}
+          requested_revision: ${{ inputs.revision }}
+        run: |
+          set -euo pipefail
+
+          case "$requested_channel" in
+            beta)           channel="latest/beta" ;;
+            candidate)      channel="latest/candidate" ;;
+            stable)         channel="latest/stable" ;;
+            *)
+              echo "::error::'$requested_channel' is not a supported risk level. Use beta, candidate or stable."
+              exit 1
+              ;;
+          esac
+
+          # Accept "latest" as a shortcut for the newest revision in edge.
+          # NOTE: assumes the same output format as `snapcraft revisions`
+          # (revision number in the first column); adjust the parser if
+          # `sdkcraft revisions` output differs.
+          if [[ "$requested_revision" == "latest" ]]; then
+            requested_revision="$(sdkcraft revisions "$sdk_name" \
+              | awk '/latest\/edge/ {print $1}' \
+              | sort -n | tail -n1)"
+            if [[ -z "$requested_revision" ]]; then
+              echo "::error::Could not find any revision in the latest/edge channel."
+              exit 1
+            fi
+          fi
+
+          if [[ ! "$requested_revision" =~ ^[0-9]+([,][0-9]+)*$ ]]; then
+            echo "::error::Revision must be a number or a comma-separated list of numbers (or latest), not '$requested_revision'."
+            exit 1
+          fi
+
+          released=""
+          failed=""
+          for revision in ${requested_revision//,/ }; do
+            if sdkcraft release "$sdk_name" "$revision" "$channel"; then
+              released="${released:+$released,}$revision"
+            else
+              failed="${failed:+$failed,}$revision"
+            fi
+          done
+
+          summary=""
+          if [[ -n "$released" ]]; then
+            summary+="The following revisions were released to the \`$channel\` channel: \`$released\`. "
+          fi
+          if [[ -n "$failed" ]]; then
+            summary+="The following revisions could not be released: \`$failed\`. Check the workflow logs for details. "
+          fi
+          echo "$summary" >> "$GITHUB_STEP_SUMMARY"
