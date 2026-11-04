@@ -1,4 +1,6 @@
 name: test-mlflow
 base: ${BASE}
 sdks:
-  - name: mlflow
+  # "try-" prefix: use the freshly packed SDK staged in the try area by
+  # `sdkcraft test` (via `sdkcraft try`), not a Store revision.
+  - name: try-mlflow
