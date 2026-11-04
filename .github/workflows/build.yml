@@ -11,6 +11,10 @@ concurrency:
 
 jobs:
   build:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-latest, ubuntu-24.04-arm]
     uses: canonical/sdkcraft-actions/.github/workflows/build.yml@main
     with:
-      runs-on: '["ubuntu-latest"]'
+      runs-on: '["${{ matrix.runner }}"]'
