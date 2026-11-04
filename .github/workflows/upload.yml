@@ -5,15 +5,12 @@ on:
     branches:
       - main
   workflow_dispatch:
-    inputs:
-      branch:
-        description: "Branch name (e.g., main)"
-        required: true
-        type: string
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
-  cancel-in-progress: true
+  # Never cancel an in-progress release, or we could end up with an
+  # uploaded-but-unreleased SDK.
+  cancel-in-progress: false
 
 jobs:
   build-and-upload:
