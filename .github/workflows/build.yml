@@ -14,7 +14,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # sdkcraft builds natively, so each architecture needs its own runner.
         runner: [ubuntu-latest, ubuntu-24.04-arm]
     uses: canonical/sdkcraft-actions/.github/workflows/build.yml@main
     with:
