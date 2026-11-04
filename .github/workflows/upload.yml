@@ -17,10 +17,19 @@ concurrency:
 
 jobs:
   build-and-upload:
+    strategy:
+      fail-fast: false
+      matrix:
+        # sdkcraft builds natively, so each architecture needs its own runner.
+        include:
+          - runner: ubuntu-latest
+            platforms: '["ubuntu@24.04:amd64","ubuntu@26.04:amd64"]'
+          - runner: ubuntu-24.04-arm
+            platforms: '["ubuntu@24.04:arm64","ubuntu@26.04:arm64"]'
     uses: canonical/sdkcraft-actions/.github/workflows/upload.yml@main
     with:
-      runs-on: '["ubuntu-latest"]'
-      platforms: '["ubuntu@24.04:amd64","ubuntu@26.04:amd64"]'
+      runs-on: '["${{ matrix.runner }}"]'
+      platforms: ${{ matrix.platforms }}
       platform-flag: "--platform"
       track: latest
       risk: edge
