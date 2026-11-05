@@ -10,7 +10,8 @@ fi
 # so poll here instead of relying on workshop's retry window.
 for _ in $(seq 1 15); do
     if curl -fsS -o /dev/null --max-time 3 http://127.0.0.1:5000/health 2>/dev/null; then
-        workshopctl set-health okay "Mlflow tracking server -> http://localhost:5000"
+        echo "Mlflow tracking server -> http://localhost:5000"
+        workshopctl set-health okay
         exit 0
     fi
     sleep 3
