@@ -1,0 +1,66 @@
+name: 'Pack an SDK'
+description: >-
+  Install LXD and sdkcraft, then pack the SDK for the given platforms.
+  Mirrors canonical/craft-actions/snapcraft/pack: the packed artifacts are
+  exposed as the 'sdks' output so callers can publish or archive them.
+author: 'mlflow-sdk maintainers'
+
+inputs:
+  platforms:
+    description: >-
+      Space-separated list of platforms to pack (e.g.
+      "ubuntu@24.04:amd64 ubuntu@26.04:amd64"). Empty packs all platforms
+      defined in sdkcraft.yaml.
+    required: false
+    default: ''
+  verbosity:
+    description: '"quiet", "brief", "verbose", "debug" or "trace"'
+    required: false
+    default: 'verbose'
+  channel:
+    description: 'Snap channel to install sdkcraft from'
+    required: false
+    default: 'edge'
+
+outputs:
+  sdks:
+    description: 'Packed .sdk artifacts, newline-separated (ready for actions/upload-artifact)'
+    value: ${{ steps.pack.outputs.sdks }}
+
+runs:
+  using: composite
+  steps:
+    - name: Install LXD
+      uses: canonical/setup-lxd@8c6a87bfb56aa48f3fb9b830baa18562d8bfd4ee # v1
+      with:
+        channel: 6/stable
+
+    - name: Install sdkcraft
+      uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 # v3.0.2
+      with:
+        max_attempts: 3
+        retry_wait_seconds: 60
+        timeout_minutes: 10
+        command: sudo snap install sdkcraft --channel "${{ inputs.channel }}" --classic
+
+    - name: Pack SDK
+      id: pack
+      uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 # v3.0.2
+      env:
+        INPUT_PLATFORMS: ${{ inputs.platforms }}
+        INPUT_VERBOSITY: ${{ inputs.verbosity }}
+      with:
+        max_attempts: 3
+        retry_wait_seconds: 60
+        timeout_minutes: 120
+        command: |
+          args=""
+          for platform in $INPUT_PLATFORMS; do
+            args="$args --platform $platform"
+          done
+          sdkcraft "--$INPUT_VERBOSITY" pack $args
+          {
+            echo "sdks<<EOF"
+            ls -1 ./*.sdk
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"

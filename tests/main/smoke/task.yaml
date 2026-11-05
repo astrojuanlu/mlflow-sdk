@@ -1,0 +1,16 @@
+summary: Launch a workshop with the mlflow SDK and check the CLI works
+
+prepare: |
+  envsubst '${BASE}' <workshop.yaml.in >workshop.yaml
+  workshop launch
+
+restore: |
+  workshop remove || true
+
+execute: |
+  echo "[1/1] mlflow CLI is available and reports a version"
+  workshop exec -- mlflow --version
+
+debug: |
+  workshop tasks
+  workshop exec -- mlflow --version || true

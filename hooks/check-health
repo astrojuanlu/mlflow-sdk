@@ -1,10 +1,21 @@
 #!/usr/bin/bash
 
-if curl -fsS -o /dev/null --max-time 3 http://127.0.0.1:5000/health 2>/dev/null; then
-    workshopctl set-health okay
-else
-    workshopctl set-health waiting "Mlflow tracking server not responding on :5000 yet"
-    # mlflow has a cold start (SQLite DB init + uvicorn worker fork takes ~20-30s)
-    # sleep to give time to workshop to retry before erroring
-    sleep 3
+if ! command -v mlflow >/dev/null 2>&1; then
+    workshopctl set-health error "mlflow is not installed; check the setup-base hook output"
+    exit 0
 fi
+
+# The tracking server serves /health on :5000 once the SQLite DB is
+# initialized and the uvicorn worker has forked; cold start takes ~20-30s,
+# so poll here instead of relying on workshop's retry window.
+for _ in $(seq 1 15); do
+    if curl -fsS -o /dev/null --max-time 3 http://127.0.0.1:5000/health 2>/dev/null; then
+        echo "Mlflow tracking server -> http://localhost:5000"
+        workshopctl set-health okay
+        exit 0
+    fi
+    sleep 3
+done
+
+sudo -u workshop --login journalctl --user -u mlflow.service --no-pager --lines=40 || true
+workshopctl set-health waiting "Mlflow tracking server not responding on :5000 yet"

@@ -14,7 +14,37 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        runner: [ubuntu-latest, ubuntu-24.04-arm]
-    uses: canonical/sdkcraft-actions/.github/workflows/build.yml@main
-    with:
-      runs-on: '["${{ matrix.runner }}"]'
+        include:
+          # KVM is available on hosted amd64 runners, so the spread suite
+          # (vm: true backend) runs there. arm64 hosted runners are
+          # build-only for now; flip run-tests once KVM is confirmed there.
+          - arch: amd64
+            runner: ubuntu-latest
+            platforms: 'ubuntu@24.04:amd64 ubuntu@26.04:amd64'
+            run-tests: true
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+            platforms: 'ubuntu@24.04:arm64 ubuntu@26.04:arm64'
+            run-tests: false
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Pack SDK for ${{ matrix.arch }}
+        id: pack
+        uses: ./.github/actions/sdkcraft/pack
+        with:
+          platforms: ${{ matrix.platforms }}
+
+      - name: Run tests for ${{ matrix.arch }}
+        if: matrix.run-tests
+        uses: ./.github/actions/sdkcraft/test
+
+      - name: Upload artifacts for ${{ matrix.arch }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: mlflow-sdk-${{ matrix.arch }}
+          path: ${{ steps.pack.outputs.sdks }}
+          retention-days: 7
